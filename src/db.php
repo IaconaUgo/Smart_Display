@@ -3,12 +3,15 @@ function db(): PDO {
   static $pdo = null;
   if ($pdo) return $pdo;
 
-  $dsn = "mysql:host={$_ENV['DB_HOST']};dbname={$_ENV['DB_NAME']};charset=utf8mb4;port={$_ENV['DB_PORT']}";
-
-  $pdo = new PDO($dsn, $_ENV['DB_USER'], $_ENV['DB_PASS'], [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-  ]);
+  $pdo = new PDO(
+    "mysql:host=localhost;dbname=Smart_Display;charset=utf8mb4",
+    "root",      // 👈 CHANGE ICI
+    "",          // 👈 souvent vide sur Linux
+    [
+      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]
+  );
 
   return $pdo;
 }
