@@ -12,27 +12,28 @@ $dotenv->load();
 // 🔹 Créer l'app Slim
 $app = AppFactory::create();
 
-// 🔹 Middleware pour parser le JSON
+// 🔹 Middleware pour parser JSON / form-data
 $app->addBodyParsingMiddleware();
 
-// 🔹 Middleware CORS (OBLIGATOIRE pour Next.js)
+// 🔹 Middleware CORS (corrigé)
 $app->add(function ($request, $handler) {
-    $response = $handler->handle($request);
+
+    // Gestion preflight (OPTIONS)
+    if ($request->getMethod() === 'OPTIONS') {
+        $response = new \Slim\Psr7\Response();
+    } else {
+        $response = $handler->handle($request);
+    }
 
     return $response
-        ->withHeader("Access-Control-Allow-Origin", "http://localhost:3000")
+        ->withHeader("Access-Control-Allow-Origin", "*") // 👈 IMPORTANT (ou ton IP)
         ->withHeader("Access-Control-Allow-Credentials", "true")
-        ->withHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        ->withHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
         ->withHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 });
 
-// 🔹 Gérer les requêtes OPTIONS (preflight)
-$app->options("/{routes:.*}", function ($request, $response) {
-    return $response;
-});
-
-// 🔹 Charger toutes les routes
+// 🔹 Charger les routes
 (require __DIR__ . "/../src/routes.php")($app);
 
-// 🔹 Lancer l'application
+// 🔹 Lancer l'app
 $app->run();
