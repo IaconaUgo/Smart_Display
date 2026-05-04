@@ -2,12 +2,18 @@
 
 return function(\Slim\App $app) {
 
-  (require_once __DIR__ . "/routes/authRoutes.php")($app);
-  (require_once __DIR__ . "/routes/userRoutes.php")($app);
-  (require_once __DIR__ . "/routes/roleRoutes.php")($app);
-  (require_once __DIR__ . "/routes/contenuRoutes.php")($app);
-  (require_once __DIR__ . "/routes/ecranRoutes.php")($app);
-  (require_once __DIR__ . "/routes/diffusionRoutes.php")($app);
-  (require_once __DIR__ . "/routes/contenuRoutes.php")($app);
+  $authRoutes = require __DIR__ . "/routes/authRoutes.php";
+  $userRoutes = require __DIR__ . "/routes/userRoutes.php";
+  $roleRoutes = require __DIR__ . "/routes/roleRoutes.php";
+  $contenuRoutes = require __DIR__ . "/routes/contenuRoutes.php";
+  $ecranRoutes = require __DIR__ . "/routes/ecranRoutes.php";
+  $diffusionRoutes = require __DIR__ . "/routes/diffusionRoutes.php";
+
+  $authRoutes($app);
+  $userRoutes($app);
+  $roleRoutes($app);
+  $contenuRoutes($app);
+  $ecranRoutes($app);
+  $diffusionRoutes($app);
 
 };
