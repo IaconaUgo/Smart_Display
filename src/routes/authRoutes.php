@@ -20,7 +20,6 @@ return function($app) {
     ]));
 
     return $res->withHeader("Content-Type","application/json");
-
   });
 
 
@@ -36,18 +35,14 @@ return function($app) {
     $password = $body["password"] ?? "";
 
     if (!$email || !$password) {
-
       $res->getBody()->write(json_encode([
         "error" => "Email et mot de passe requis"
       ]));
 
-      return $res
-        ->withHeader("Content-Type","application/json")
-        ->withStatus(400);
+      return $res->withHeader("Content-Type","application/json")->withStatus(400);
     }
 
     $pdo = db();
-
     $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
 
     $st = $pdo->prepare("
@@ -66,15 +61,12 @@ return function($app) {
       "ok" => true
     ]));
 
-    return $res
-      ->withHeader("Content-Type","application/json")
-      ->withStatus(201);
-
+    return $res->withHeader("Content-Type","application/json")->withStatus(201);
   });
 
 
   // ===============================
-  // LOGIN
+  // LOGIN (SANS COOKIE)
   // ===============================
 
   $app->post("/auth/login", function(Request $req, Response $res) {
@@ -96,32 +88,21 @@ return function($app) {
     $u = $st->fetch(PDO::FETCH_ASSOC);
 
     if (!$u || !password_verify($body["password"] ?? "", $u["mot_de_passe"])) {
-
       $res->getBody()->write(json_encode([
         "error" => "Identifiants invalides"
       ]));
 
-      return $res
-        ->withHeader("Content-Type","application/json")
-        ->withStatus(401);
+      return $res->withHeader("Content-Type","application/json")->withStatus(401);
     }
 
-    // génération JWT
     $token = issue_jwt(
       (string)$u["id_user"],
       $u["email"],
       $u["nom_role"]
     );
 
-    // cookie sécurisé
-    setcookie("sd_token", $token, [
-      "expires" => time() + 604800,
-      "path" => "/",
-      "httponly" => true,
-      "samesite" => "Lax"
-    ]);
-
     $res->getBody()->write(json_encode([
+      "token" => $token,
       "user" => [
         "id_user" => $u["id_user"],
         "nom" => $u["nom"],
@@ -132,7 +113,6 @@ return function($app) {
     ]));
 
     return $res->withHeader("Content-Type","application/json");
-
   });
 
 
@@ -142,25 +122,16 @@ return function($app) {
 
   $app->post("/auth/logout", function(Request $req, Response $res) {
 
-    // supprimer cookie
-    setcookie("sd_token", "", [
-      "expires" => time() - 3600,
-      "path" => "/",
-      "httponly" => true,
-      "samesite" => "Lax"
-    ]);
-
     $res->getBody()->write(json_encode([
       "ok" => true
     ]));
 
     return $res->withHeader("Content-Type","application/json");
-
   });
 
 
   // ===============================
-  // ME (utilisateur connecté)
+  // ME
   // ===============================
 
   $app->get("/me", function(Request $req, Response $res) {
@@ -179,14 +150,11 @@ return function($app) {
     $user = $st->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
-
       $res->getBody()->write(json_encode([
         "error" => "Utilisateur introuvable"
       ]));
 
-      return $res
-        ->withHeader("Content-Type","application/json")
-        ->withStatus(404);
+      return $res->withHeader("Content-Type","application/json")->withStatus(404);
     }
 
     $res->getBody()->write(json_encode([
@@ -194,7 +162,6 @@ return function($app) {
     ]));
 
     return $res->withHeader("Content-Type","application/json");
-
   });
 
 };

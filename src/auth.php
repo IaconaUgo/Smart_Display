@@ -16,29 +16,32 @@ function issue_jwt(string $userId, string $email, string $role): string {
   return JWT::encode($payload, $_ENV["JWT_SECRET"], "HS256");
 }
 
-// 🔐 USER AUTH
+// 🔐 AUTH VIA HEADER (PLUS DE COOKIE)
 function require_auth(): array {
-  if (!isset($_COOKIE["sd_token"])) {
+
+  $headers = getallheaders();
+
+  if (!isset($headers["Authorization"])) {
     http_response_code(401);
     echo json_encode(["error" => "Non authentifié"]);
     exit;
   }
 
+  $token = str_replace("Bearer ", "", $headers["Authorization"]);
+
   return (array) JWT::decode(
-    $_COOKIE["sd_token"],
+    $token,
     new Key($_ENV["JWT_SECRET"], "HS256")
   );
 }
 
-// 🔥 ADMIN AUTH
 function require_admin(): array {
 
   $payload = require_auth();
 
-  // ⚠️ ton admin = role = 1
   if ($payload["role"] != 1) {
     http_response_code(403);
-    echo json_encode(["error" => "Accès refusé (admin uniquement)"]);
+    echo json_encode(["error" => "Accès refusé"]);
     exit;
   }
 
