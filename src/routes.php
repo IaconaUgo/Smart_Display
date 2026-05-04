@@ -8,6 +8,6 @@ return function(\Slim\App $app) {
   (require_once __DIR__ . "/routes/contenuRoutes.php")($app);
   (require_once __DIR__ . "/routes/ecranRoutes.php")($app);
   (require_once __DIR__ . "/routes/diffusionRoutes.php")($app);
-  (require_once __DIR__ . "/routes/annoncesRoutes.php")($app);
+  (require_once __DIR__ . "/routes/contenuRoutes.php")($app);
 
 };
