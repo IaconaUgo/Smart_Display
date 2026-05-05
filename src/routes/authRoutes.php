@@ -11,7 +11,6 @@ return function($app) {
   // ===============================
   // TEST API
   // ===============================
-
   $app->get("/", function(Request $req, Response $res) {
 
     $res->getBody()->write(json_encode([
@@ -22,11 +21,9 @@ return function($app) {
     return $res->withHeader("Content-Type","application/json");
   });
 
-
   // ===============================
   // REGISTER
   // ===============================
-
   $app->post("/auth/register", function(Request $req, Response $res) {
 
     $body = $req->getParsedBody() ?? [];
@@ -43,6 +40,19 @@ return function($app) {
     }
 
     $pdo = db();
+
+    // 🔥 vérifie si déjà existant
+    $check = $pdo->prepare("SELECT id_user FROM users WHERE email = ?");
+    $check->execute([$email]);
+
+    if ($check->fetch()) {
+      $res->getBody()->write(json_encode([
+        "error" => "Email déjà utilisé"
+      ]));
+
+      return $res->withHeader("Content-Type","application/json")->withStatus(409);
+    }
+
     $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
 
     $st = $pdo->prepare("
@@ -64,11 +74,9 @@ return function($app) {
     return $res->withHeader("Content-Type","application/json")->withStatus(201);
   });
 
-
   // ===============================
-  // LOGIN (SANS COOKIE)
+  // LOGIN (JWT)
   // ===============================
-
   $app->post("/auth/login", function(Request $req, Response $res) {
 
     $body = $req->getParsedBody() ?? [];
@@ -82,7 +90,7 @@ return function($app) {
     ");
 
     $st->execute([
-      strtolower($body["email"] ?? "")
+      strtolower(trim($body["email"] ?? ""))
     ]);
 
     $u = $st->fetch(PDO::FETCH_ASSOC);
@@ -115,11 +123,9 @@ return function($app) {
     return $res->withHeader("Content-Type","application/json");
   });
 
-
   // ===============================
   // LOGOUT
   // ===============================
-
   $app->post("/auth/logout", function(Request $req, Response $res) {
 
     $res->getBody()->write(json_encode([
@@ -129,11 +135,9 @@ return function($app) {
     return $res->withHeader("Content-Type","application/json");
   });
 
-
   // ===============================
   // ME
   // ===============================
-
   $app->get("/me", function(Request $req, Response $res) {
 
     $payload = require_auth();
