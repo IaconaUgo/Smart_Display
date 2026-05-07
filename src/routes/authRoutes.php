@@ -8,22 +8,14 @@ require_once __DIR__ . "/../auth.php";
 
 return function($app) {
 
-  // ===============================
-  // TEST API
-  // ===============================
   $app->get("/", function(Request $req, Response $res) {
-
     $res->getBody()->write(json_encode([
       "ok" => true,
       "service" => "smartdisplay-api"
     ]));
-
     return $res->withHeader("Content-Type","application/json");
   });
 
-  // ===============================
-  // REGISTER
-  // ===============================
   $app->post("/auth/register", function(Request $req, Response $res) {
 
     $body = $req->getParsedBody() ?? [];
@@ -32,25 +24,16 @@ return function($app) {
     $password = $body["password"] ?? "";
 
     if (!$email || !$password) {
-      $res->getBody()->write(json_encode([
-        "error" => "Email et mot de passe requis"
-      ]));
-
-      return $res->withHeader("Content-Type","application/json")->withStatus(400);
+      return $res->withStatus(400);
     }
 
     $pdo = db();
 
-    // 🔥 vérifie si déjà existant
     $check = $pdo->prepare("SELECT id_user FROM users WHERE email = ?");
     $check->execute([$email]);
 
     if ($check->fetch()) {
-      $res->getBody()->write(json_encode([
-        "error" => "Email déjà utilisé"
-      ]));
-
-      return $res->withHeader("Content-Type","application/json")->withStatus(409);
+      return $res->withStatus(409);
     }
 
     $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
@@ -67,25 +50,19 @@ return function($app) {
       $passwordHash
     ]);
 
-    $res->getBody()->write(json_encode([
-      "ok" => true
-    ]));
-
-    return $res->withHeader("Content-Type","application/json")->withStatus(201);
+    $res->getBody()->write(json_encode(["ok"=>true]));
+    return $res->withHeader("Content-Type","application/json");
   });
 
-  // ===============================
-  // LOGIN (JWT)
-  // ===============================
+  // 🔥 LOGIN FIX
   $app->post("/auth/login", function(Request $req, Response $res) {
 
     $body = $req->getParsedBody() ?? [];
     $pdo = db();
 
     $st = $pdo->prepare("
-      SELECT u.*, r.nom_role
-      FROM users u
-      JOIN roles r ON u.id_role = r.id_role
+      SELECT *
+      FROM users
       WHERE email = ?
     ");
 
@@ -96,17 +73,14 @@ return function($app) {
     $u = $st->fetch(PDO::FETCH_ASSOC);
 
     if (!$u || !password_verify($body["password"] ?? "", $u["mot_de_passe"])) {
-      $res->getBody()->write(json_encode([
-        "error" => "Identifiants invalides"
-      ]));
-
-      return $res->withHeader("Content-Type","application/json")->withStatus(401);
+      return $res->withStatus(401);
     }
 
+    // ✅ FIX ROLE
     $token = issue_jwt(
       (string)$u["id_user"],
       $u["email"],
-      $u["nom_role"]
+      $u["id_role"]
     );
 
     $res->getBody()->write(json_encode([
@@ -123,21 +97,11 @@ return function($app) {
     return $res->withHeader("Content-Type","application/json");
   });
 
-  // ===============================
-  // LOGOUT
-  // ===============================
   $app->post("/auth/logout", function(Request $req, Response $res) {
-
-    $res->getBody()->write(json_encode([
-      "ok" => true
-    ]));
-
+    $res->getBody()->write(json_encode(["ok"=>true]));
     return $res->withHeader("Content-Type","application/json");
   });
 
-  // ===============================
-  // ME
-  // ===============================
   $app->get("/me", function(Request $req, Response $res) {
 
     $payload = require_auth();
@@ -150,21 +114,11 @@ return function($app) {
     ");
 
     $st->execute([$payload["sub"]]);
-
     $user = $st->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user) {
-      $res->getBody()->write(json_encode([
-        "error" => "Utilisateur introuvable"
-      ]));
+    if (!$user) return $res->withStatus(404);
 
-      return $res->withHeader("Content-Type","application/json")->withStatus(404);
-    }
-
-    $res->getBody()->write(json_encode([
-      "user" => $user
-    ]));
-
+    $res->getBody()->write(json_encode(["user"=>$user]));
     return $res->withHeader("Content-Type","application/json");
   });
 
