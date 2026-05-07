@@ -1,4 +1,5 @@
 <?php
+
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -15,39 +16,79 @@ return function($app) {
     require_auth();
 
     $pdo = db();
-    $data = $pdo->query("SELECT * FROM ecrans")->fetchAll();
+
+    $data = $pdo->query("
+      SELECT *
+      FROM ecrans
+      ORDER BY id_ecran DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
     $res->getBody()->write(json_encode($data));
-    return $res->withHeader("Content-Type","application/json");
 
+    return $res->withHeader("Content-Type", "application/json");
   });
+
 
   // ===============================
   // CREATE ECRAN
   // ===============================
-  $app->post("/ecrans", function(Request $req, Response $res){
+  $app->post("/ecrans", function(Request $req, Response $res) {
 
     $payload = require_auth();
 
-    if ($payload["role"] != 1) {
-      return $res->withStatus(403);
+    // 🔐 ADMIN UNIQUEMENT
+    if ($payload["role"] !== "admin") {
+
+      $res->getBody()->write(json_encode([
+        "error" => "Accès refusé"
+      ]));
+
+      return $res
+        ->withHeader("Content-Type", "application/json")
+        ->withStatus(403);
+    }
+
+    $body = $req->getParsedBody() ?? [];
+
+    $identifiant = trim($body["identifiant_ecran"] ?? "");
+    $adresseIp = trim($body["adresse_ip"] ?? "");
+    $idSalle = intval($body["id_salle"] ?? 1);
+
+    if (!$identifiant) {
+
+      $res->getBody()->write(json_encode([
+        "error" => "Identifiant écran requis"
+      ]));
+
+      return $res
+        ->withHeader("Content-Type", "application/json")
+        ->withStatus(400);
     }
 
     $pdo = db();
-    $body = $req->getParsedBody();
 
     $st = $pdo->prepare("
-      INSERT INTO ecrans (nom, localisation)
-      VALUES (?, ?)
+      INSERT INTO ecrans
+      (
+        identifiant_ecran,
+        adresse_ip,
+        statut,
+        id_salle
+      )
+      VALUES (?, ?, 'actif', ?)
     ");
 
     $st->execute([
-      $body["nom"],
-      $body["localisation"]
+      $identifiant,
+      $adresseIp ?: null,
+      $idSalle
     ]);
 
-    $res->getBody()->write(json_encode(["ok"=>true]));
-    return $res->withHeader("Content-Type","application/json");
+    $res->getBody()->write(json_encode([
+      "ok" => true
+    ]));
+
+    return $res->withHeader("Content-Type", "application/json");
   });
 
 };
