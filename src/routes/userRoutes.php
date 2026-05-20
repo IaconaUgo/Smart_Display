@@ -9,6 +9,48 @@ require_once __DIR__ . "/../auth.php";
 return function ($app) {
 
     // ===============================
+    // UPDATE MY PROFILE
+    // ⚠️ DOIT ÊTRE AVANT /users/{id}
+    // ===============================
+    $app->put("/users/me", function (
+        Request $req,
+        Response $res
+    ) {
+
+        $payload = require_auth();
+
+        $pdo = db();
+
+        $body = $req->getParsedBody() ?? [];
+
+        $st = $pdo->prepare("
+            UPDATE users
+            SET
+                nom = ?,
+                prenom = ?,
+                email = ?
+            WHERE id_user = ?
+        ");
+
+        $st->execute([
+            trim($body["nom"]),
+            trim($body["prenom"]),
+            strtolower(trim($body["email"])),
+            $payload["sub"]
+        ]);
+
+        $res->getBody()->write(json_encode([
+            "ok" => true,
+            "message" => "Profil mis à jour"
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+    });
+
+    // ===============================
     // CREATE USER (ADMIN)
     // ===============================
     $app->post("/users", function (Request $req, Response $res) {
@@ -242,47 +284,6 @@ return function ($app) {
         $res->getBody()->write(json_encode([
             "ok" => true,
             "message" => "Utilisateur supprimé"
-        ]));
-
-        return $res->withHeader(
-            "Content-Type",
-            "application/json"
-        );
-    });
-
-    // ===============================
-    // UPDATE MY PROFILE
-    // ===============================
-    $app->put("/users/me", function (
-        Request $req,
-        Response $res
-    ) {
-
-        $payload = require_auth();
-
-        $pdo = db();
-
-        $body = $req->getParsedBody() ?? [];
-
-        $st = $pdo->prepare("
-            UPDATE users
-            SET
-                nom = ?,
-                prenom = ?,
-                email = ?
-            WHERE id_user = ?
-        ");
-
-        $st->execute([
-            trim($body["nom"]),
-            trim($body["prenom"]),
-            strtolower(trim($body["email"])),
-            $payload["sub"]
-        ]);
-
-        $res->getBody()->write(json_encode([
-            "ok" => true,
-            "message" => "Profil mis à jour"
         ]));
 
         return $res->withHeader(
