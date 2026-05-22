@@ -18,7 +18,7 @@ return function($app) {
 
     $data = $pdo->query("
       SELECT *
-      FROM emplois_du_temps
+      FROM emploi_du_temps
       ORDER BY classe, jour, heure_debut
     ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -37,7 +37,7 @@ return function($app) {
 
     $st = $pdo->prepare("
       SELECT *
-      FROM emplois_du_temps
+      FROM emploi_du_temps
       WHERE classe = ?
       ORDER BY jour, heure_debut
     ");
@@ -77,7 +77,7 @@ return function($app) {
     $pdo = db();
 
     $st = $pdo->prepare("
-      INSERT INTO emplois_du_temps
+      INSERT INTO emploi_du_temps
       (
         classe,
         jour,
@@ -125,7 +125,7 @@ return function($app) {
     $pdo = db();
 
     $st = $pdo->prepare("
-      DELETE FROM emplois_du_temps
+      DELETE FROM emploi_du_temps
       WHERE id_edt = ?
     ");
 
