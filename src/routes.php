@@ -9,11 +9,17 @@ return function(\Slim\App $app) {
   $ecranRoutes = require __DIR__ . "/routes/ecranRoutes.php";
   $diffusionRoutes = require __DIR__ . "/routes/diffusionRoutes.php";
 
+  // 🔥 NOUVEAU
+  $emploiRoutes = require __DIR__ . "/routes/emploiRoutes.php";
+
   $authRoutes($app);
   $userRoutes($app);
   $roleRoutes($app);
   $contenuRoutes($app);
   $ecranRoutes($app);
   $diffusionRoutes($app);
+
+  // 🔥 NOUVEAU
+  $emploiRoutes($app);
 
 };
