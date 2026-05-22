@@ -36,7 +36,7 @@ function send_verification_email(
         $mail->addAddress($email);
 
         $url =
-            "http://20.19.169.91:3000/verification?token="
+            "http://localhost:3000/verification?token="
             . $token;
 
         $mail->isHTML(true);
