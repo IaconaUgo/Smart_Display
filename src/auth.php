@@ -1,65 +1,114 @@
 <?php
+
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-function issue_jwt(string $userId, string $email, string $role): string {
+function issue_jwt(
+    string $userId,
+    string $email,
+    int $role
+): string {
 
-  $payload = [
-    "iss" => $_ENV["JWT_ISSUER"],
-    "iat" => time(),
-    "exp" => time() + intval($_ENV["JWT_TTL_SECONDS"]),
-    "sub" => $userId,
-    "email" => $email,
-    "role" => $role
-  ];
+    $payload = [
+        "iss" => $_ENV["JWT_ISSUER"],
+        "iat" => time(),
+        "exp" => time() + intval($_ENV["JWT_TTL_SECONDS"]),
+        "sub" => $userId,
+        "email" => $email,
+        "role" => $role
+    ];
 
-  return JWT::encode($payload, $_ENV["JWT_SECRET"], "HS256");
+    return JWT::encode(
+        $payload,
+        $_ENV["JWT_SECRET"],
+        "HS256"
+    );
 }
 
-// 🔐 AUTH VIA HEADER (robuste)
 function require_auth(): array {
 
-  // 🔥 compatible Apache + Nginx
-  $headers = getallheaders();
+    $headers = getallheaders();
 
-  if (!isset($headers["Authorization"])) {
-    http_response_code(401);
-    echo json_encode(["error" => "Token manquant"]);
-    exit;
-  }
+    $authorization =
+        $headers["Authorization"]
+        ?? $headers["authorization"]
+        ?? null;
 
-  $authHeader = $headers["Authorization"];
+    if (!$authorization) {
 
-  if (!str_starts_with($authHeader, "Bearer ")) {
-    http_response_code(401);
-    echo json_encode(["error" => "Format token invalide"]);
-    exit;
-  }
+        http_response_code(401);
 
-  $token = str_replace("Bearer ", "", $authHeader);
+        echo json_encode([
+            "error" => "Token manquant"
+        ]);
 
-  try {
-    return (array) JWT::decode(
-      $token,
-      new Key($_ENV["JWT_SECRET"], "HS256")
+        exit;
+    }
+
+    if (
+        !str_starts_with(
+            $authorization,
+            "Bearer "
+        )
+    ) {
+
+        http_response_code(401);
+
+        echo json_encode([
+            "error" => "Format token invalide"
+        ]);
+
+        exit;
+    }
+
+    $token = trim(
+        str_replace(
+            "Bearer ",
+            "",
+            $authorization
+        )
     );
-  } catch (Exception $e) {
-    http_response_code(401);
-    echo json_encode(["error" => "Token invalide"]);
-    exit;
-  }
+
+    try {
+
+        return (array) JWT::decode(
+            $token,
+            new Key(
+                $_ENV["JWT_SECRET"],
+                "HS256"
+            )
+        );
+
+    } catch (Exception $e) {
+
+        http_response_code(401);
+
+        echo json_encode([
+            "error" => "Token invalide"
+        ]);
+
+        exit;
+
+    }
+
 }
 
-// 🔥 ADMIN
 function require_admin(): array {
 
-  $payload = require_auth();
+    $payload = require_auth();
 
-  if ($payload["role"] != 1) {
-    http_response_code(403);
-    echo json_encode(["error" => "Accès refusé"]);
-    exit;
-  }
+    if (($payload["role"] ?? 0) != 2) {
 
-  return $payload;
+        http_response_code(403);
+
+        echo json_encode([
+            "error" => "Accès refusé"
+        ]);
+
+        exit;
+
+    }
+
+    return $payload;
+
 }

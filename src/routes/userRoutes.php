@@ -10,9 +10,9 @@ return function ($app) {
 
     // ===============================
     // UPDATE MY PROFILE
-    // ⚠️ DOIT ÊTRE AVANT /users/{id}
     // ===============================
-    $app->put("/users/me", function (
+
+    $app->put("/users/me", function(
         Request $req,
         Response $res
     ) {
@@ -28,15 +28,21 @@ return function ($app) {
             SET
                 nom = ?,
                 prenom = ?,
-                email = ?
+                email = ?,
+                numero_telephone = ?,
+                date_naissance = ?
             WHERE id_user = ?
         ");
 
         $st->execute([
-            trim($body["nom"]),
-            trim($body["prenom"]),
-            strtolower(trim($body["email"])),
+
+            trim($body["nom"] ?? ""),
+            trim($body["prenom"] ?? ""),
+            strtolower(trim($body["email"] ?? "")),
+            trim($body["telephone"] ?? ""),
+            trim($body["dateNaissance"] ?? ""),
             $payload["sub"]
+
         ]);
 
         $res->getBody()->write(json_encode([
@@ -48,126 +54,19 @@ return function ($app) {
             "Content-Type",
             "application/json"
         );
+
     });
 
     // ===============================
-    // CREATE USER (ADMIN)
+    // GET USERS (ADMIN)
     // ===============================
-    $app->post("/users", function (Request $req, Response $res) {
 
-        $payload = require_auth();
+    $app->get("/users", function(
+        Request $req,
+        Response $res
+    ) {
 
-        // 🔐 Vérification admin
-        if (($payload["role"] ?? "") != 1 && ($payload["role"] ?? "") !== "admin") {
-
-            $res->getBody()->write(json_encode([
-                "error" => "Accès refusé"
-            ]));
-
-            return $res
-                ->withHeader("Content-Type", "application/json")
-                ->withStatus(403);
-        }
-
-        $pdo = db();
-
-        $body = $req->getParsedBody() ?? [];
-
-        // 🔥 Validation
-        if (
-            empty($body["nom"]) ||
-            empty($body["prenom"]) ||
-            empty($body["email"]) ||
-            empty($body["password"])
-        ) {
-
-            $res->getBody()->write(json_encode([
-                "error" => "Champs manquants"
-            ]));
-
-            return $res
-                ->withHeader("Content-Type", "application/json")
-                ->withStatus(400);
-        }
-
-        // 🔥 Vérifie si email déjà utilisé
-        $check = $pdo->prepare("
-            SELECT id_user
-            FROM users
-            WHERE email = ?
-        ");
-
-        $check->execute([
-            strtolower(trim($body["email"]))
-        ]);
-
-        if ($check->fetch()) {
-
-            $res->getBody()->write(json_encode([
-                "error" => "Email déjà utilisé"
-            ]));
-
-            return $res
-                ->withHeader("Content-Type", "application/json")
-                ->withStatus(409);
-        }
-
-        // 🔒 Hash mot de passe
-        $hash = password_hash(
-            $body["password"],
-            PASSWORD_ARGON2ID
-        );
-
-        // 🔥 Création utilisateur
-        $st = $pdo->prepare("
-            INSERT INTO users
-            (
-                nom,
-                prenom,
-                email,
-                mot_de_passe,
-                id_role,
-                date_creation
-            )
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ");
-
-        $st->execute([
-            trim($body["nom"]),
-            trim($body["prenom"]),
-            strtolower(trim($body["email"])),
-            $hash,
-            $body["id_role"] ?? 1
-        ]);
-
-        $res->getBody()->write(json_encode([
-            "ok" => true,
-            "message" => "Utilisateur créé"
-        ]));
-
-        return $res
-            ->withHeader("Content-Type", "application/json")
-            ->withStatus(201);
-    });
-
-    // ===============================
-    // GET USERS
-    // ===============================
-    $app->get("/users", function (Request $req, Response $res) {
-
-        $payload = require_auth();
-
-        // 🔐 Vérification admin
-        if (($payload["role"] ?? "") != 1 && ($payload["role"] ?? "") !== "admin") {
-
-            $res->getBody()->write(json_encode([
-                "error" => "Accès refusé"
-            ]));
-
-            return $res
-                ->withHeader("Content-Type", "application/json")
-                ->withStatus(403);
-        }
+        require_admin();
 
         $pdo = db();
 
@@ -177,6 +76,8 @@ return function ($app) {
                 nom,
                 prenom,
                 email,
+                numero_telephone,
+                date_naissance,
                 id_role,
                 date_creation
             FROM users
@@ -191,29 +92,20 @@ return function ($app) {
             "Content-Type",
             "application/json"
         );
+
     });
 
     // ===============================
-    // UPDATE USER
+    // UPDATE ROLE
     // ===============================
-    $app->put("/users/{id}", function (
+
+    $app->put("/users/{id}/role", function(
         Request $req,
         Response $res,
         $args
     ) {
 
-        $payload = require_auth();
-
-        if (($payload["role"] ?? "") != 1 && ($payload["role"] ?? "") !== "admin") {
-
-            $res->getBody()->write(json_encode([
-                "error" => "Accès refusé"
-            ]));
-
-            return $res
-                ->withHeader("Content-Type", "application/json")
-                ->withStatus(403);
-        }
+        require_admin();
 
         $pdo = db();
 
@@ -221,74 +113,25 @@ return function ($app) {
 
         $st = $pdo->prepare("
             UPDATE users
-            SET
-                nom = ?,
-                prenom = ?,
-                email = ?,
-                id_role = ?
+            SET id_role = ?
             WHERE id_user = ?
         ");
 
         $st->execute([
-            trim($body["nom"]),
-            trim($body["prenom"]),
-            strtolower(trim($body["email"])),
-            $body["id_role"],
+            intval($body["id_role"]),
             $args["id"]
         ]);
 
         $res->getBody()->write(json_encode([
             "ok" => true,
-            "message" => "Utilisateur modifié"
+            "message" => "Rôle modifié"
         ]));
 
         return $res->withHeader(
             "Content-Type",
             "application/json"
         );
+
     });
 
-    // ===============================
-    // DELETE USER
-    // ===============================
-    $app->delete("/users/{id}", function (
-        Request $req,
-        Response $res,
-        $args
-    ) {
-
-        $payload = require_auth();
-
-        if (($payload["role"] ?? "") != 1 && ($payload["role"] ?? "") !== "admin") {
-
-            $res->getBody()->write(json_encode([
-                "error" => "Accès refusé"
-            ]));
-
-            return $res
-                ->withHeader("Content-Type", "application/json")
-                ->withStatus(403);
-        }
-
-        $pdo = db();
-
-        $st = $pdo->prepare("
-            DELETE FROM users
-            WHERE id_user = ?
-        ");
-
-        $st->execute([
-            $args["id"]
-        ]);
-
-        $res->getBody()->write(json_encode([
-            "ok" => true,
-            "message" => "Utilisateur supprimé"
-        ]));
-
-        return $res->withHeader(
-            "Content-Type",
-            "application/json"
-        );
-    });
 };

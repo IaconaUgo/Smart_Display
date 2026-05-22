@@ -1,4 +1,5 @@
 <?php
+
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -8,118 +9,304 @@ require_once __DIR__ . "/../auth.php";
 
 return function($app) {
 
-  $app->get("/", function(Request $req, Response $res) {
-    $res->getBody()->write(json_encode([
-      "ok" => true,
-      "service" => "smartdisplay-api"
-    ]));
-    return $res->withHeader("Content-Type","application/json");
-  });
+    // ===============================
+    // API STATUS
+    // ===============================
 
-  $app->post("/auth/register", function(Request $req, Response $res) {
+    $app->get("/", function(Request $req, Response $res) {
 
-    $body = $req->getParsedBody() ?? [];
+        $res->getBody()->write(json_encode([
+            "ok" => true,
+            "service" => "smartdisplay-api"
+        ]));
 
-    $email = strtolower(trim($body["email"] ?? ""));
-    $password = $body["password"] ?? "";
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
 
-    if (!$email || !$password) {
-      return $res->withStatus(400);
-    }
+    });
 
-    $pdo = db();
+    // ===============================
+    // REGISTER
+    // ===============================
 
-    $check = $pdo->prepare("SELECT id_user FROM users WHERE email = ?");
-    $check->execute([$email]);
+    $app->post("/auth/register", function(
+        Request $req,
+        Response $res
+    ) {
 
-    if ($check->fetch()) {
-      return $res->withStatus(409);
-    }
+        $body = $req->getParsedBody() ?? [];
 
-    $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
+        $nom = trim($body["nom"] ?? "");
+        $prenom = trim($body["prenom"] ?? "");
+        $email = strtolower(trim($body["email"] ?? ""));
+        $password = trim($body["password"] ?? "");
 
-    $st = $pdo->prepare("
-      INSERT INTO users (nom, prenom, email, mot_de_passe, id_role, date_creation)
-      VALUES (?, ?, ?, ?, 1, NOW())
-    ");
+        $telephone =
+            trim($body["telephone"] ?? "");
 
-    $st->execute([
-      $body["nom"] ?? "",
-      $body["prenom"] ?? "",
-      $email,
-      $passwordHash
-    ]);
+        $dateNaissance =
+            trim($body["dateNaissance"] ?? "");
 
-    $res->getBody()->write(json_encode(["ok"=>true]));
-    return $res->withHeader("Content-Type","application/json");
-  });
+        if (
+            !$nom ||
+            !$prenom ||
+            !$email ||
+            !$password
+        ) {
 
-  // 🔥 LOGIN FIX
-  $app->post("/auth/login", function(Request $req, Response $res) {
+            $res->getBody()->write(json_encode([
+                "error" => "Champs manquants"
+            ]));
 
-    $body = $req->getParsedBody() ?? [];
-    $pdo = db();
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(400);
 
-    $st = $pdo->prepare("
-      SELECT *
-      FROM users
-      WHERE email = ?
-    ");
+        }
 
-    $st->execute([
-      strtolower(trim($body["email"] ?? ""))
-    ]);
+        // Validation email
 
-    $u = $st->fetch(PDO::FETCH_ASSOC);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
-    if (!$u || !password_verify($body["password"] ?? "", $u["mot_de_passe"])) {
-      return $res->withStatus(401);
-    }
+            $res->getBody()->write(json_encode([
+                "error" => "Email invalide"
+            ]));
 
-    // ✅ FIX ROLE
-    $token = issue_jwt(
-      (string)$u["id_user"],
-      $u["email"],
-      $u["id_role"]
-    );
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(400);
 
-    $res->getBody()->write(json_encode([
-      "token" => $token,
-      "user" => [
-        "id_user" => $u["id_user"],
-        "nom" => $u["nom"],
-        "prenom" => $u["prenom"],
-        "email" => $u["email"],
-        "id_role" => $u["id_role"]
-      ]
-    ]));
+        }
 
-    return $res->withHeader("Content-Type","application/json");
-  });
+        $pdo = db();
 
-  $app->post("/auth/logout", function(Request $req, Response $res) {
-    $res->getBody()->write(json_encode(["ok"=>true]));
-    return $res->withHeader("Content-Type","application/json");
-  });
+        // Email déjà utilisé
 
-  $app->get("/me", function(Request $req, Response $res) {
+        $check = $pdo->prepare("
+            SELECT id_user
+            FROM users
+            WHERE email = ?
+        ");
 
-    $payload = require_auth();
-    $pdo = db();
+        $check->execute([$email]);
 
-    $st = $pdo->prepare("
-      SELECT id_user, nom, prenom, email, id_role
-      FROM users
-      WHERE id_user = ?
-    ");
+        if ($check->fetch()) {
 
-    $st->execute([$payload["sub"]]);
-    $user = $st->fetch(PDO::FETCH_ASSOC);
+            $res->getBody()->write(json_encode([
+                "error" => "Email déjà utilisé"
+            ]));
 
-    if (!$user) return $res->withStatus(404);
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(409);
 
-    $res->getBody()->write(json_encode(["user"=>$user]));
-    return $res->withHeader("Content-Type","application/json");
-  });
+        }
+
+        $passwordHash = password_hash(
+            $password,
+            PASSWORD_ARGON2ID
+        );
+
+        // 🔥 rôle 1 = utilisateur classique
+
+        $st = $pdo->prepare("
+            INSERT INTO users
+            (
+                nom,
+                prenom,
+                email,
+                mot_de_passe,
+                numero_telephone,
+                date_naissance,
+                id_role,
+                date_creation
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 1, NOW())
+        ");
+
+        $st->execute([
+            $nom,
+            $prenom,
+            $email,
+            $passwordHash,
+            $telephone ?: null,
+            $dateNaissance ?: null
+        ]);
+
+        $res->getBody()->write(json_encode([
+            "ok" => true,
+            "message" => "Compte créé"
+        ]));
+
+        return $res
+            ->withHeader(
+                "Content-Type",
+                "application/json"
+            )
+            ->withStatus(201);
+
+    });
+
+    // ===============================
+    // LOGIN
+    // ===============================
+
+    $app->post("/auth/login", function(
+        Request $req,
+        Response $res
+    ) {
+
+        $body = $req->getParsedBody() ?? [];
+
+        $email =
+            strtolower(trim($body["email"] ?? ""));
+
+        $password =
+            trim($body["password"] ?? "");
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            SELECT *
+            FROM users
+            WHERE email = ?
+        ");
+
+        $st->execute([$email]);
+
+        $u = $st->fetch(PDO::FETCH_ASSOC);
+
+        if (
+            !$u ||
+            !password_verify(
+                $password,
+                $u["mot_de_passe"]
+            )
+        ) {
+
+            $res->getBody()->write(json_encode([
+                "error" => "Identifiants invalides"
+            ]));
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(401);
+
+        }
+
+        $token = issue_jwt(
+            (string)$u["id_user"],
+            $u["email"],
+            intval($u["id_role"])
+        );
+
+        $res->getBody()->write(json_encode([
+
+            "token" => $token,
+
+            "user" => [
+
+                "id_user" => $u["id_user"],
+                "nom" => $u["nom"],
+                "prenom" => $u["prenom"],
+                "email" => $u["email"],
+                "telephone" => $u["numero_telephone"],
+                "date_naissance" => $u["date_naissance"],
+                "id_role" => $u["id_role"]
+
+            ]
+
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
+    // ===============================
+    // LOGOUT
+    // ===============================
+
+    $app->post("/auth/logout", function(
+        Request $req,
+        Response $res
+    ) {
+
+        $res->getBody()->write(json_encode([
+            "ok" => true
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
+    // ===============================
+    // ME
+    // ===============================
+
+    $app->get("/me", function(
+        Request $req,
+        Response $res
+    ) {
+
+        $payload = require_auth();
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            SELECT
+                id_user,
+                nom,
+                prenom,
+                email,
+                numero_telephone,
+                date_naissance,
+                id_role,
+                date_creation
+            FROM users
+            WHERE id_user = ?
+        ");
+
+        $st->execute([
+            $payload["sub"]
+        ]);
+
+        $user = $st->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+
+            return $res->withStatus(404);
+
+        }
+
+        $res->getBody()->write(json_encode([
+            "user" => $user
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
 
 };
