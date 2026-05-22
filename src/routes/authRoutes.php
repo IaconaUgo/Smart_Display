@@ -290,13 +290,22 @@ return function($app) {
             $payload["sub"]
         ]);
 
-        $user = $st->fetch(PDO::FETCH_ASSOC);
+        $data = $st->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user) {
-
+        if (!$data) {
             return $res->withStatus(404);
-
         }
+
+        $user = [
+            "id_user" => $data["id_user"],
+            "nom" => $data["nom"],
+            "prenom" => $data["prenom"],
+            "email" => $data["email"],
+            "telephone" => $data["numero_telephone"],
+            "dateNaissance" => $data["date_naissance"],
+            "id_role" => $data["id_role"],
+            "date_creation" => $data["date_creation"]
+        ];
 
         $res->getBody()->write(json_encode([
             "user" => $user
