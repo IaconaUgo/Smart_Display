@@ -1,4 +1,5 @@
 <?php
+
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -12,20 +13,29 @@ return function($app) {
   // GET ALL
   // ===============================
 
-  $app->get("/annonces", function(Request $req, Response $res){
+  $app->get("/annonces", function(
+    Request $req,
+    Response $res
+  ){
 
     $pdo = db();
 
     $data = $pdo->query("
       SELECT c.*, u.nom, u.prenom
       FROM contenus c
-      JOIN users u ON c.id_auteur = u.id_user
+      JOIN users u
+      ON c.id_auteur = u.id_user
       ORDER BY c.date_debut DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
 
-    $res->getBody()->write(json_encode($data));
+    $res->getBody()->write(
+      json_encode($data)
+    );
 
-    return $res->withHeader("Content-Type","application/json");
+    return $res->withHeader(
+      "Content-Type",
+      "application/json"
+    );
 
   });
 
@@ -33,28 +43,53 @@ return function($app) {
   // GET ONE
   // ===============================
 
-  $app->get("/annonces/{id}", function(Request $req, Response $res, $args){
+  $app->get("/annonces/{id}", function(
+    Request $req,
+    Response $res,
+    $args
+  ){
 
     $pdo = db();
 
     $st = $pdo->prepare("
       SELECT c.*, u.nom, u.prenom
       FROM contenus c
-      JOIN users u ON c.id_auteur = u.id_user
+      JOIN users u
+      ON c.id_auteur = u.id_user
       WHERE c.id_contenu = ?
     ");
 
-    $st->execute([$args["id"]]);
+    $st->execute([
+      $args["id"]
+    ]);
 
     $data = $st->fetch(PDO::FETCH_ASSOC);
 
     if (!$data) {
-      return $res->withStatus(404);
+
+      $res->getBody()->write(
+        json_encode([
+          "error" => "Annonce introuvable"
+        ])
+      );
+
+      return $res
+        ->withHeader(
+          "Content-Type",
+          "application/json"
+        )
+        ->withStatus(404);
+
     }
 
-    $res->getBody()->write(json_encode($data));
+    $res->getBody()->write(
+      json_encode($data)
+    );
 
-    return $res->withHeader("Content-Type","application/json");
+    return $res->withHeader(
+      "Content-Type",
+      "application/json"
+    );
 
   });
 
@@ -62,7 +97,10 @@ return function($app) {
   // CREATE
   // ===============================
 
-  $app->post("/annonces", function(Request $req, Response $res){
+  $app->post("/annonces", function(
+    Request $req,
+    Response $res
+  ){
 
     $payload = require_auth();
 
@@ -72,23 +110,36 @@ return function($app) {
 
     $st = $pdo->prepare("
       INSERT INTO contenus
-      (titre, message, type, date_debut, id_auteur)
+      (
+        titre,
+        message,
+        type,
+        date_debut,
+        id_auteur
+      )
       VALUES (?, ?, ?, ?, ?)
     ");
 
     $st->execute([
+
       $body["titre"],
       $body["message"],
       $body["type"],
       $body["date_debut"],
       $payload["sub"]
+
     ]);
 
-    $res->getBody()->write(json_encode([
-      "ok" => true
-    ]));
+    $res->getBody()->write(
+      json_encode([
+        "ok" => true
+      ])
+    );
 
-    return $res->withHeader("Content-Type","application/json");
+    return $res->withHeader(
+      "Content-Type",
+      "application/json"
+    );
 
   });
 
@@ -96,25 +147,38 @@ return function($app) {
   // DELETE
   // ===============================
 
-  $app->delete("/contenus/{id}", function(Request $req, Response $res, $args){
+  $app->delete("/contenus/{id}", function(
+    Request $req,
+    Response $res,
+    $args
+  ){
 
     $payload = require_auth();
 
-    // 🔐 admin uniquement
-    if ($payload["role"] != 1 && $payload["role"] != "admin") {
+    // 🔐 ADMIN UNIQUEMENT
 
-      $res->getBody()->write(json_encode([
-        "error" => "Accès refusé"
-      ]));
+    if (
+      $payload["role"] != 1 &&
+      $payload["role"] != "admin"
+    ) {
+
+      $res->getBody()->write(
+        json_encode([
+          "error" => "Accès refusé"
+        ])
+      );
 
       return $res
-        ->withHeader("Content-Type","application/json")
+        ->withHeader(
+          "Content-Type",
+          "application/json"
+        )
         ->withStatus(403);
+
     }
 
     $pdo = db();
 
-    // Vérifie si existe
     $check = $pdo->prepare("
       SELECT id_contenu
       FROM contenus
@@ -127,16 +191,21 @@ return function($app) {
 
     if (!$check->fetch()) {
 
-      $res->getBody()->write(json_encode([
-        "error" => "Contenu introuvable"
-      ]));
+      $res->getBody()->write(
+        json_encode([
+          "error" => "Contenu introuvable"
+        ])
+      );
 
       return $res
-        ->withHeader("Content-Type","application/json")
+        ->withHeader(
+          "Content-Type",
+          "application/json"
+        )
         ->withStatus(404);
+
     }
 
-    // DELETE
     $st = $pdo->prepare("
       DELETE FROM contenus
       WHERE id_contenu = ?
@@ -146,11 +215,16 @@ return function($app) {
       $args["id"]
     ]);
 
-    $res->getBody()->write(json_encode([
-      "ok" => true
-    ]));
+    $res->getBody()->write(
+      json_encode([
+        "ok" => true
+      ])
+    );
 
-    return $res->withHeader("Content-Type","application/json");
+    return $res->withHeader(
+      "Content-Type",
+      "application/json"
+    );
 
   });
 
