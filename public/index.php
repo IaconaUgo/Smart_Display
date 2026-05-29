@@ -25,8 +25,7 @@ $app->add(function ($request, $handler) {
     $allowedOrigins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://172.28.112.1:3000",
-        "http://20.19.169.91:3000"
+        "https://smart-display-front.vercel.app",
     ];
 
     // 🔹 Requête OPTIONS (préflight)

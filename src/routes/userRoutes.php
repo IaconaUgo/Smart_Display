@@ -134,4 +134,112 @@ return function ($app) {
 
     });
 
+        // ===============================
+    // UPDATE USER (ADMIN)
+    // ===============================
+
+    $app->put("/users/{id}", function(
+        Request $req,
+        Response $res,
+        $args
+    ) {
+
+        require_admin();
+
+        $pdo = db();
+
+        $body = $req->getParsedBody() ?? [];
+
+        $st = $pdo->prepare("
+            UPDATE users
+            SET
+                nom = ?,
+                prenom = ?,
+                email = ?,
+                id_role = ?
+            WHERE id_user = ?
+        ");
+
+        $st->execute([
+
+            trim($body["nom"] ?? ""),
+            trim($body["prenom"] ?? ""),
+            strtolower(trim($body["email"] ?? "")),
+            intval($body["id_role"] ?? 1),
+            $args["id"]
+
+        ]);
+
+        $res->getBody()->write(json_encode([
+            "ok" => true,
+            "message" => "Utilisateur modifié"
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
+        // ===============================
+    // DELETE USER (ADMIN)
+    // ===============================
+
+    $app->delete("/users/{id}", function(
+        Request $req,
+        Response $res,
+        $args
+    ) {
+
+        require_admin();
+
+        $pdo = db();
+
+        $check = $pdo->prepare("
+            SELECT id_user
+            FROM users
+            WHERE id_user = ?
+        ");
+
+        $check->execute([
+            $args["id"]
+        ]);
+
+        if (!$check->fetch()) {
+
+            $res->getBody()->write(json_encode([
+                "error" => "Utilisateur introuvable"
+            ]));
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(404);
+
+        }
+
+        $st = $pdo->prepare("
+            DELETE FROM users
+            WHERE id_user = ?
+        ");
+
+        $st->execute([
+            $args["id"]
+        ]);
+
+        $res->getBody()->write(json_encode([
+            "ok" => true,
+            "message" => "Utilisateur supprimé"
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
 };
