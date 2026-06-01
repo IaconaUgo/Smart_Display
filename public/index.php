@@ -6,29 +6,47 @@ use Slim\Factory\AppFactory;
 use Dotenv\Dotenv;
 use Slim\Psr7\Response;
 
-// 🔹 Charger les variables d'environnement
+// ===============================
+// ENV
+// ===============================
+
 $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
 $dotenv->load();
 
-// 🔹 Créer l'application Slim
+// ===============================
+// APP
+// ===============================
+
 $app = AppFactory::create();
 
-// 🔹 Middleware parsing JSON
 $app->addBodyParsingMiddleware();
 
-// 🔹 Middleware CORS
+// ===============================
+// CORS
+// ===============================
+
 $app->add(function ($request, $handler) {
 
     $origin = $request->getHeaderLine("Origin");
 
-    // 🔥 Frontends autorisés
-    $allowedOrigins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://smart-display-front.vercel.app",
-    ];
+    $allowed = false;
 
-    // 🔹 Requête OPTIONS (préflight)
+    // Local
+    if (
+        $origin === "http://localhost:3000" ||
+        $origin === "http://127.0.0.1:3000"
+    ) {
+        $allowed = true;
+    }
+
+    // Tous les projets Vercel
+    if (
+        str_contains($origin, ".vercel.app")
+    ) {
+        $allowed = true;
+    }
+
+    // Préflight OPTIONS
     if ($request->getMethod() === "OPTIONS") {
 
         $response = new Response();
@@ -39,8 +57,7 @@ $app->add(function ($request, $handler) {
 
     }
 
-    // 🔥 Autoriser uniquement les origines définies
-    if (in_array($origin, $allowedOrigins)) {
+    if ($allowed) {
 
         $response = $response->withHeader(
             "Access-Control-Allow-Origin",
@@ -50,7 +67,10 @@ $app->add(function ($request, $handler) {
     }
 
     return $response
-        ->withHeader("Access-Control-Allow-Credentials", "true")
+        ->withHeader(
+            "Access-Control-Allow-Credentials",
+            "true"
+        )
         ->withHeader(
             "Access-Control-Allow-Headers",
             "Content-Type, Authorization, X-Requested-With"
@@ -59,10 +79,17 @@ $app->add(function ($request, $handler) {
             "Access-Control-Allow-Methods",
             "GET, POST, PUT, DELETE, OPTIONS"
         );
+
 });
 
-// 🔹 Routes API
+// ===============================
+// ROUTES
+// ===============================
+
 (require __DIR__ . "/../src/routes.php")($app);
 
-// 🔹 Lancer l'application
+// ===============================
+// RUN
+// ===============================
+
 $app->run();
