@@ -20,47 +20,57 @@ function send_verification_email(
 
         $mail->SMTPAuth = true;
 
-        $mail->Username = "tomspns06@gmail.com";
+        $mail->Username = $_ENV["SMTP_USER"];
 
-        $mail->Password = "unwj jlfo ukfh cvwe";
+        $mail->Password = $_ENV["SMTP_PASSWORD"];
 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
 
         $mail->Port = 587;
 
         $mail->setFrom(
-            "tomspns06@gmail.com",
+            $_ENV["SMTP_USER"],
             "SmartDisplay"
         );
 
         $mail->addAddress($email);
 
         $url =
-            "http://localhost:3000/verification?token="
+            "https://smart-display-web.vercel.app/verification?token="
             . $token;
 
         $mail->isHTML(true);
 
-        $mail->Subject = "Verification de votre compte";
+        $mail->CharSet = "UTF-8";
+
+        $mail->Subject = "Vérification de votre compte";
 
         $mail->Body = "
             <h2>Bienvenue sur SmartDisplay</h2>
 
             <p>
-                Cliquez sur le lien ci-dessous
-                pour verifier votre compte :
+                Cliquez sur le lien ci-dessous pour vérifier votre compte :
             </p>
 
-            <a href='$url'>
-                Verifier mon compte
-            </a>
+            <p>
+                <a href='$url'>
+                    Vérifier mon compte
+                </a>
+            </p>
         ";
+
+        $mail->AltBody =
+            "Vérifiez votre compte : " . $url;
 
         $mail->send();
 
         return true;
 
     } catch (Exception $e) {
+
+        error_log(
+            'Erreur PHPMailer : ' . $mail->ErrorInfo
+        );
 
         return false;
 

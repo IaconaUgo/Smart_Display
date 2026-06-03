@@ -97,7 +97,8 @@ function require_admin(): array {
 
     $payload = require_auth();
 
-    if (($payload["role"] ?? 0) != 2) {
+    // ADMIN = ROLE 3
+    if (($payload["role"] ?? 0) != 3) {
 
         http_response_code(403);
 
