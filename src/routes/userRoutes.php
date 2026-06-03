@@ -34,6 +34,13 @@ return function ($app) {
             WHERE id_user = ?
         ");
 
+        $idRole =
+            intval($body["id_role"] ?? 1);
+
+        if (!in_array($idRole, [1, 3])) {
+            $idRole = 1;
+        }
+
         $st->execute([
 
             trim($body["nom"] ?? ""),
@@ -41,7 +48,8 @@ return function ($app) {
             strtolower(trim($body["email"] ?? "")),
             trim($body["telephone"] ?? ""),
             trim($body["dateNaissance"] ?? ""),
-            $payload["sub"]
+            $idRole,
+            $args["id"]
 
         ]);
 
@@ -79,6 +87,7 @@ return function ($app) {
                 numero_telephone,
                 date_naissance,
                 id_role,
+                email_verifie,
                 date_creation
             FROM users
             ORDER BY id_user DESC
@@ -92,6 +101,193 @@ return function ($app) {
             "Content-Type",
             "application/json"
         );
+
+    });
+
+    // ===============================
+    // GET USER BY ID (ADMIN)
+    // ===============================
+
+    $app->get("/users/{id}", function(
+        Request $req,
+        Response $res,
+        $args
+    ) {
+
+        require_admin();
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            SELECT
+                id_user,
+                nom,
+                prenom,
+                email,
+                numero_telephone,
+                date_naissance,
+                id_role,
+                email_verifie,
+                date_creation
+            FROM users
+            WHERE id_user = ?
+        ");
+
+        $st->execute([
+            $args["id"]
+        ]);
+
+        $user = $st->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+
+            $res->getBody()->write(json_encode([
+                "error" => "Utilisateur introuvable"
+            ]));
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(404);
+
+        }
+
+        $res->getBody()->write(json_encode([
+            "user" => $user
+        ]));
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
+    // ===============================
+    // CREATE USER (ADMIN)
+    // ===============================
+
+    $app->post("/users", function(
+        Request $req,
+        Response $res
+    ) {
+
+        require_admin();
+
+        $pdo = db();
+
+        $body = $req->getParsedBody() ?? [];
+
+        $nom = trim($body["nom"] ?? "");
+        $prenom = trim($body["prenom"] ?? "");
+        $email = strtolower(trim($body["email"] ?? ""));
+        $password = trim($body["password"] ?? "");
+
+        $telephone =
+            trim($body["telephone"] ?? "");
+
+        $dateNaissance =
+            trim($body["dateNaissance"] ?? "");
+
+        $idRole =
+            intval($body["id_role"] ?? 1);
+
+        if (!in_array($idRole, [1, 3])) {
+            $idRole = 1;
+        }
+
+        $check = $pdo->prepare("
+            SELECT id_user
+            FROM users
+            WHERE email = ?
+        ");
+
+        $check->execute([$email]);
+
+        if ($check->fetch()) {
+
+            $res->getBody()->write(json_encode([
+                "error" => "Email déjà utilisé"
+            ]));
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(409);
+
+        }
+
+        if (
+            !$nom ||
+            !$prenom ||
+            !$email ||
+            !$password
+        ) {
+
+            $res->getBody()->write(json_encode([
+                "error" => "Champs manquants"
+            ]));
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(400);
+
+        }
+
+        $passwordHash = password_hash(
+            $password,
+            PASSWORD_ARGON2ID
+        );
+
+        $st = $pdo->prepare("
+            INSERT INTO users
+            (
+                nom,
+                prenom,
+                email,
+                mot_de_passe,
+                id_role,
+                numero_telephone,
+                date_naissance,
+                email_verifie,
+                date_creation
+            )
+            VALUES
+            (
+                ?, ?, ?, ?, ?, ?, ?, 1, NOW()
+            )
+        ");
+
+        $st->execute([
+
+            $nom,
+            $prenom,
+            $email,
+            $passwordHash,
+            $idRole,
+            $telephone ?: null,
+            $dateNaissance ?: null
+
+        ]);
+
+        $res->getBody()->write(json_encode([
+            "ok" => true,
+            "message" => "Utilisateur créé"
+        ]));
+
+        return $res
+            ->withHeader(
+                "Content-Type",
+                "application/json"
+            )
+            ->withStatus(201);
 
     });
 
@@ -117,8 +313,15 @@ return function ($app) {
             WHERE id_user = ?
         ");
 
+        $idRole =
+            intval($body["id_role"] ?? 1);
+
+        if (!in_array($idRole, [1, 3])) {
+            $idRole = 1;
+        }
+
         $st->execute([
-            intval($body["id_role"]),
+            $idRole,
             $args["id"]
         ]);
 
@@ -134,7 +337,7 @@ return function ($app) {
 
     });
 
-        // ===============================
+    // ===============================
     // UPDATE USER (ADMIN)
     // ===============================
 
@@ -156,6 +359,8 @@ return function ($app) {
                 nom = ?,
                 prenom = ?,
                 email = ?,
+                numero_telephone = ?,
+                date_naissance = ?,
                 id_role = ?
             WHERE id_user = ?
         ");
@@ -165,6 +370,8 @@ return function ($app) {
             trim($body["nom"] ?? ""),
             trim($body["prenom"] ?? ""),
             strtolower(trim($body["email"] ?? "")),
+            trim($body["telephone"] ?? ""),
+            trim($body["dateNaissance"] ?? ""),
             intval($body["id_role"] ?? 1),
             $args["id"]
 
@@ -182,7 +389,7 @@ return function ($app) {
 
     });
 
-        // ===============================
+    // ===============================
     // DELETE USER (ADMIN)
     // ===============================
 
@@ -192,7 +399,23 @@ return function ($app) {
         $args
     ) {
 
-        require_admin();
+        $payload = require_admin();
+
+        if ((int)$payload["sub"] === (int)$args["id"]) {
+
+            $res->getBody()->write(json_encode([
+                "error" =>
+                    "Vous ne pouvez pas supprimer votre propre compte"
+            ]));
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(400);
+
+        }
 
         $pdo = db();
 

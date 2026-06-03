@@ -8,9 +8,10 @@ return function(\Slim\App $app) {
   $contenuRoutes = require __DIR__ . "/routes/contenuRoutes.php";
   $ecranRoutes = require __DIR__ . "/routes/ecranRoutes.php";
   $diffusionRoutes = require __DIR__ . "/routes/diffusionRoutes.php";
-
-  // 🔥 NOUVEAU
   $emploiRoutes = require __DIR__ . "/routes/emploiRoutes.php";
+
+  // ADMIN
+  $adminRoutes = require __DIR__ . "/routes/adminRoutes.php";
 
   $authRoutes($app);
   $userRoutes($app);
@@ -18,8 +19,9 @@ return function(\Slim\App $app) {
   $contenuRoutes($app);
   $ecranRoutes($app);
   $diffusionRoutes($app);
-
-  // 🔥 NOUVEAU
   $emploiRoutes($app);
+
+  // ADMIN
+  $adminRoutes($app);
 
 };
