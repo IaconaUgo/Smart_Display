@@ -36,7 +36,7 @@ function send_verification_email(
         $mail->addAddress($email);
 
         $url =
-            "http://localhost:3000/verification?token="
+            "https://smart-display-web.vercel.app/verification?token="
             . $token;
 
         $mail->isHTML(true);
@@ -62,7 +62,9 @@ function send_verification_email(
 
     } catch (Exception $e) {
 
-        return false;
+        error_log("PHPMailer ERROR: " . $mail->ErrorInfo);
+	error_log("Exception: " . $e->getMessage());
+	return false;
 
     }
 
