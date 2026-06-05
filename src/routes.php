@@ -10,9 +10,6 @@ return function(\Slim\App $app) {
   $diffusionRoutes = require __DIR__ . "/routes/diffusionRoutes.php";
   $emploiRoutes = require __DIR__ . "/routes/emploiRoutes.php";
 
-  // ADMIN
-  $adminRoutes = require __DIR__ . "/routes/adminRoutes.php";
-
   $authRoutes($app);
   $userRoutes($app);
   $roleRoutes($app);
