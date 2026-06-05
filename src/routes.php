@@ -21,7 +21,5 @@ return function(\Slim\App $app) {
   $diffusionRoutes($app);
   $emploiRoutes($app);
 
-  // ADMIN
-  $adminRoutes($app);
 
 };
