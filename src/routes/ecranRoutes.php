@@ -8,87 +8,286 @@ require_once __DIR__ . "/../auth.php";
 
 return function($app) {
 
-  // ===============================
-  // GET ECRANS
-  // ===============================
-  $app->get("/ecrans", function(Request $req, Response $res) {
+    // ===============================
+    // GET ECRANS
+    // ===============================
 
-    require_auth();
+    $app->get("/ecrans", function(
+        Request $req,
+        Response $res
+    ) {
 
-    $pdo = db();
+        require_auth();
 
-    $data = $pdo->query("
-      SELECT *
-      FROM ecrans
-      ORDER BY id_ecran DESC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+        $pdo = db();
 
-    $res->getBody()->write(json_encode($data));
+        $st = $pdo->query("
+            SELECT *
+            FROM ecrans
+            ORDER BY id_ecran DESC
+        ");
 
-    return $res->withHeader("Content-Type", "application/json");
-  });
+        $data =
+            $st->fetchAll(PDO::FETCH_ASSOC);
 
+        $res->getBody()->write(
+            json_encode($data)
+        );
 
-  // ===============================
-  // CREATE ECRAN
-  // ===============================
-  $app->post("/ecrans", function(Request $req, Response $res) {
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
 
-    $payload = require_auth();
+    });
 
-    // 🔐 ADMIN UNIQUEMENT
-    if ($payload["role"] !== "admin") {
+    // ===============================
+    // GET ECRAN BY ID
+    // ===============================
 
-      $res->getBody()->write(json_encode([
-        "error" => "Accès refusé"
-      ]));
+    $app->get("/ecrans/{id}", function(
+        Request $req,
+        Response $res,
+        $args
+    ) {
 
-      return $res
-        ->withHeader("Content-Type", "application/json")
-        ->withStatus(403);
-    }
+        require_auth();
 
-    $body = $req->getParsedBody() ?? [];
+        $pdo = db();
 
-    $identifiant = trim($body["identifiant_ecran"] ?? "");
-    $adresseIp = trim($body["adresse_ip"] ?? "");
-    $idSalle = intval($body["id_salle"] ?? 1);
+        $st = $pdo->prepare("
+            SELECT *
+            FROM ecrans
+            WHERE id_ecran = ?
+        ");
 
-    if (!$identifiant) {
+        $st->execute([
+            $args["id"]
+        ]);
 
-      $res->getBody()->write(json_encode([
-        "error" => "Identifiant écran requis"
-      ]));
+        $screen =
+            $st->fetch(PDO::FETCH_ASSOC);
 
-      return $res
-        ->withHeader("Content-Type", "application/json")
-        ->withStatus(400);
-    }
+        if (!$screen) {
 
-    $pdo = db();
+            $res->getBody()->write(
+                json_encode([
+                    "error" =>
+                        "Écran introuvable"
+                ])
+            );
 
-    $st = $pdo->prepare("
-      INSERT INTO ecrans
-      (
-        identifiant_ecran,
-        adresse_ip,
-        statut,
-        id_salle
-      )
-      VALUES (?, ?, 'actif', ?)
-    ");
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(404);
 
-    $st->execute([
-      $identifiant,
-      $adresseIp ?: null,
-      $idSalle
-    ]);
+        }
 
-    $res->getBody()->write(json_encode([
-      "ok" => true
-    ]));
+        $res->getBody()->write(
+            json_encode($screen)
+        );
 
-    return $res->withHeader("Content-Type", "application/json");
-  });
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
+    // ===============================
+    // CREATE ECRAN
+    // ===============================
+
+    $app->post("/ecrans", function(
+        Request $req,
+        Response $res
+    ) {
+
+        require_admin();
+
+        $body =
+            $req->getParsedBody() ?? [];
+
+        $identifiant =
+            trim(
+                $body["identifiant_ecran"]
+                ?? ""
+            );
+
+        $adresseIp =
+            trim(
+                $body["adresse_ip"]
+                ?? ""
+            );
+
+        $idSalle =
+            intval(
+                $body["id_salle"]
+                ?? 1
+            );
+
+        if (!$identifiant) {
+
+            $res->getBody()->write(
+                json_encode([
+                    "error" =>
+                        "Identifiant requis"
+                ])
+            );
+
+            return $res
+                ->withHeader(
+                    "Content-Type",
+                    "application/json"
+                )
+                ->withStatus(400);
+
+        }
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            INSERT INTO ecrans
+            (
+                identifiant_ecran,
+                adresse_ip,
+                statut,
+                id_salle
+            )
+            VALUES
+            (
+                ?, ?, 'actif', ?
+            )
+        ");
+
+        $st->execute([
+            $identifiant,
+            $adresseIp ?: null,
+            $idSalle
+        ]);
+
+        $res->getBody()->write(
+            json_encode([
+                "ok" => true
+            ])
+        );
+
+        return $res
+            ->withHeader(
+                "Content-Type",
+                "application/json"
+            )
+            ->withStatus(201);
+
+    });
+
+    // ===============================
+    // UPDATE ECRAN
+    // ===============================
+
+    $app->put("/ecrans/{id}", function(
+        Request $req,
+        Response $res,
+        $args
+    ) {
+
+        require_admin();
+
+        $body =
+            $req->getParsedBody() ?? [];
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            UPDATE ecrans
+            SET
+                identifiant_ecran = ?,
+                adresse_ip = ?,
+                statut = ?,
+                id_salle = ?
+            WHERE id_ecran = ?
+        ");
+
+        $st->execute([
+
+            trim(
+                $body["identifiant_ecran"]
+                ?? ""
+            ),
+
+            trim(
+                $body["adresse_ip"]
+                ?? ""
+            ),
+
+            trim(
+                $body["statut"]
+                ?? "actif"
+            ),
+
+            intval(
+                $body["id_salle"]
+                ?? 1
+            ),
+
+            $args["id"]
+
+        ]);
+
+        $res->getBody()->write(
+            json_encode([
+                "ok" => true,
+                "message" =>
+                    "Écran modifié"
+            ])
+        );
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
+    // ===============================
+    // DELETE ECRAN
+    // ===============================
+
+    $app->delete("/ecrans/{id}", function(
+        Request $req,
+        Response $res,
+        $args
+    ) {
+
+        require_admin();
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            DELETE FROM ecrans
+            WHERE id_ecran = ?
+        ");
+
+        $st->execute([
+            $args["id"]
+        ]);
+
+        $res->getBody()->write(
+            json_encode([
+                "ok" => true,
+                "message" =>
+                    "Écran supprimé"
+            ])
+        );
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
 
 };
