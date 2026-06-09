@@ -68,12 +68,9 @@ function send_verification_email(
 
     } catch (Exception $e) {
 
-        error_log(
-            'Erreur PHPMailer : ' . $mail->ErrorInfo
-        );
-
-        return false;
-
+        error_log("PHPMailer ERROR: " . $mail->ErrorInfo);
+	error_log("Exception: " . $e->getMessage());
+	return false;
     }
 
 }
