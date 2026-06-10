@@ -115,9 +115,10 @@ return function($app) {
         message,
         type,
         date_debut,
-        id_auteur
+        id_auteur,
+        lien
       )
-      VALUES (?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?)
     ");
 
     $st->execute([
@@ -126,7 +127,8 @@ return function($app) {
       $body["message"],
       $body["type"],
       $body["date_debut"],
-      $payload["sub"]
+      $payload["sub"],
+      $body["lien"]
 
     ]);
 
