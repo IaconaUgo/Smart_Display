@@ -160,23 +160,21 @@ return function($app) {
     // 🔐 ADMIN UNIQUEMENT
 
     if (
-      $payload["role"] != 1 &&
-      $payload["role"] != "admin"
-    ) {
+      ($payload["role"] ?? 0) != 3
+    )
+    {
+        $res->getBody()->write(
+          json_encode([
+            "error" => "Accès refusé"
+          ])
+        );
 
-      $res->getBody()->write(
-        json_encode([
-          "error" => "Accès refusé"
-        ])
-      );
-
-      return $res
-        ->withHeader(
-          "Content-Type",
-          "application/json"
-        )
-        ->withStatus(403);
-
+        return $res
+          ->withHeader(
+            "Content-Type",
+            "application/json"
+          )
+          ->withStatus(403);
     }
 
     $pdo = db();
