@@ -62,6 +62,9 @@ function send_verification_email(
         $mail->AltBody =
             "Vérifiez votre compte : " . $url;
 
+        
+        error_log("SMTP USER = " . ($_ENV["SMTP_USER"] ?? "NULL"));
+        error_log("SMTP PASS = " . ($_ENV["SMTP_PASSWORD"] ?? "NULL"));    
         $mail->send();
 
         return true;
