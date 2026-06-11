@@ -125,4 +125,47 @@ return function ($app) {
 
     });
 
+    // ===============================
+    // FAVORIS DETAILS
+    // ===============================
+
+    $app->get("/favoris/details", function(
+        Request $req,
+        Response $res
+    ){
+
+        $payload = require_auth();
+
+        $pdo = db();
+
+        $st = $pdo->prepare("
+            SELECT c.*
+            FROM favoris f
+            INNER JOIN contenus c
+                ON c.id_contenu = f.id_contenu
+            WHERE f.id_user = ?
+            ORDER BY c.date_debut DESC
+        ");
+
+        $st->execute([
+            $payload["sub"]
+        ]);
+
+        $favoris = $st->fetchAll(
+            PDO::FETCH_ASSOC
+        );
+
+        $res->getBody()->write(
+            json_encode([
+                "favoris" => $favoris
+            ])
+        );
+
+        return $res->withHeader(
+            "Content-Type",
+            "application/json"
+        );
+
+    });
+
 };
