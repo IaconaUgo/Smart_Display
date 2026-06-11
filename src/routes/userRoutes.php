@@ -13,8 +13,8 @@ return function ($app) {
     // ===============================
 
     $app->put("/users/me", function(
-        Request $req,
-        Response $res
+    Request $req,
+    Response $res
     ) {
 
         $payload = require_auth();
@@ -34,13 +34,6 @@ return function ($app) {
             WHERE id_user = ?
         ");
 
-        $idRole =
-            intval($body["id_role"] ?? 1);
-
-        if (!in_array($idRole, [1, 3])) {
-            $idRole = 1;
-        }
-
         $st->execute([
 
             trim($body["nom"] ?? ""),
@@ -48,8 +41,7 @@ return function ($app) {
             strtolower(trim($body["email"] ?? "")),
             trim($body["telephone"] ?? ""),
             trim($body["dateNaissance"] ?? ""),
-            $idRole,
-            $args["id"]
+            $payload["sub"]
 
         ]);
 
