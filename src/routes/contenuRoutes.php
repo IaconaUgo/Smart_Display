@@ -205,6 +205,72 @@ return function($app) {
   });
 
   // ===============================
+  // UPDATE ANNONCE
+  // ===============================
+
+  $app->put("/annonces/{id}", function(
+      Request $req,
+      Response $res,
+      $args
+  ){
+
+      $payload = require_auth();
+
+      if (
+          ($payload["role"] ?? 0) != 3
+      ) {
+          $res->getBody()->write(
+              json_encode([
+                  "error" => "Accès refusé"
+              ])
+          );
+
+          return $res
+              ->withHeader(
+                  "Content-Type",
+                  "application/json"
+              )
+              ->withStatus(403);
+      }
+
+      $body = $req->getParsedBody();
+
+      $pdo = db();
+
+      $st = $pdo->prepare("
+          UPDATE contenus
+          SET
+              titre = ?,
+              message = ?,
+              type = ?,
+              lien = ?
+          WHERE id_contenu = ?
+      ");
+
+      $st->execute([
+
+          $body["titre"],
+          $body["message"],
+          $body["type"],
+          $body["lien"] ?? null,
+          $args["id"]
+
+      ]);
+
+      $res->getBody()->write(
+          json_encode([
+              "ok" => true
+          ])
+      );
+
+      return $res->withHeader(
+          "Content-Type",
+          "application/json"
+      );
+
+  });
+
+  // ===============================
   // DELETE
   // ===============================
 
