@@ -6,6 +6,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 require_once __DIR__ . "/../db.php";
 require_once __DIR__ . "/../middleware/authMiddleware.php";
 require_once __DIR__ . "/../auth.php";
+require_once __DIR__ . "/../announcementMail.php";
 
 return function($app) {
 
@@ -128,13 +129,59 @@ return function($app) {
       $body["type"],
       $body["date_debut"],
       $payload["sub"],
-      $body["lien"]
+      $body["lien"] ?? null
 
     ]);
 
+    // ===============================
+    // ID DE L'ANNONCE CRÉÉE
+    // ===============================
+
+    $idContenu = (int)$pdo->lastInsertId();
+
+    // ===============================
+    // ENVOI DES NOTIFICATIONS EMAIL
+    // ===============================
+
+    try {
+
+      $users = $pdo->query("
+        SELECT email
+        FROM users
+        WHERE email_verifie = 1
+      ")->fetchAll(PDO::FETCH_ASSOC);
+
+      foreach ($users as $user) {
+
+        send_announcement_email(
+
+          $user["email"],
+
+          $body["titre"],
+
+          $body["message"],
+
+          $body["type"],
+
+          $idContenu
+
+        );
+
+      }
+
+    } catch (Exception $e) {
+
+      error_log(
+        "Erreur notifications annonces : "
+        . $e->getMessage()
+      );
+
+    }
+
     $res->getBody()->write(
       json_encode([
-        "ok" => true
+        "ok" => true,
+        "notification_count" => count($users ?? [])
       ])
     );
 
