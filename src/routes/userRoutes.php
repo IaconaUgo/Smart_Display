@@ -30,7 +30,8 @@ return function ($app) {
                 prenom = ?,
                 email = ?,
                 numero_telephone = ?,
-                date_naissance = ?
+                date_naissance = ?,
+                notifications_email = ?
             WHERE id_user = ?
         ");
 
@@ -41,6 +42,11 @@ return function ($app) {
             strtolower(trim($body["email"] ?? "")),
             trim($body["telephone"] ?? ""),
             trim($body["dateNaissance"] ?? ""),
+
+            !empty($body["notifications_email"])
+                ? 1
+                : 0,
+
             $payload["sub"]
 
         ]);

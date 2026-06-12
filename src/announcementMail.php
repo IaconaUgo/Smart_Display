@@ -43,27 +43,55 @@ function send_announcement_email(
         switch ($type) {
 
             case "actualite":
+
                 $url .= "/actualites/" . $idContenu;
+
                 $subject =
                     "📰 Nouvelle actualité";
+
                 break;
 
             case "offre":
+
                 $url .= "/offres/" . $idContenu;
+
                 $subject =
                     "💼 Nouvelle offre";
+
                 break;
 
             case "evenement":
+
                 $url .= "/evenements/" . $idContenu;
+
                 $subject =
                     "🎉 Nouvel événement";
+
                 break;
 
             default:
+
                 $subject =
-                    "Nouvelle annonce";
+                    "📢 Nouvelle annonce";
+
+                break;
         }
+
+        $safeTitre =
+            htmlspecialchars(
+                $titre,
+                ENT_QUOTES,
+                "UTF-8"
+            );
+
+        $safeMessage =
+            nl2br(
+                htmlspecialchars(
+                    $message,
+                    ENT_QUOTES,
+                    "UTF-8"
+                )
+            );
 
         $mail->isHTML(true);
 
@@ -72,18 +100,51 @@ function send_announcement_email(
         $mail->Subject = $subject;
 
         $mail->Body = "
-            <h2>$titre</h2>
+            <div style='font-family: Arial, sans-serif;'>
 
-            <p>$message</p>
+                <h2>{$safeTitre}</h2>
 
-            <br>
+                <p>{$safeMessage}</p>
 
-            <a href='$url'>
-                Voir l'annonce
-            </a>
+                <br>
+
+                <a
+                    href='{$url}'
+                    style='
+                        background:#2563eb;
+                        color:white;
+                        padding:12px 20px;
+                        text-decoration:none;
+                        border-radius:8px;
+                        display:inline-block;
+                    '
+                >
+                    Voir l'annonce
+                </a>
+
+                <p style='margin-top:20px;color:#666;'>
+
+                    Cet email a été envoyé automatiquement
+                    par SmartDisplay.
+
+                </p>
+
+            </div>
         ";
 
+        $mail->AltBody =
+            $titre .
+            "\n\n" .
+            $message .
+            "\n\n" .
+            $url;
+
         $mail->send();
+
+        error_log(
+            "MAIL ANNONCE ENVOYE A : "
+            . $email
+        );
 
         return true;
 

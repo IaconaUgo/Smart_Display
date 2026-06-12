@@ -424,7 +424,8 @@ return function($app) {
                 numero_telephone,
                 date_naissance,
                 id_role,
-                date_creation
+                date_creation,
+                notifications_email
             FROM users
             WHERE id_user = ?
         ");

@@ -145,50 +145,62 @@ return function($app) {
 
     try {
 
-      $users = $pdo->query("
-        SELECT email
-        FROM users
-        WHERE email_verifie = 1
-      ")->fetchAll(PDO::FETCH_ASSOC);
+        $users = $pdo->query("
+            SELECT email
+            FROM users
+            WHERE email_verifie = 1
+            AND notifications_email = 1
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
-      foreach ($users as $user) {
+        $sentCount = 0;
 
-        send_announcement_email(
+        foreach ($users as $user) {
 
-          $user["email"],
+            $success = send_announcement_email(
 
-          $body["titre"],
+                $user["email"],
 
-          $body["message"],
+                $body["titre"],
 
-          $body["type"],
+                $body["message"],
 
-          $idContenu
+                $body["type"],
 
+                $idContenu
+
+            );
+
+            if ($success) {
+                $sentCount++;
+            }
+
+        }
+
+        error_log(
+            "Notifications annonce envoyées : "
+            . $sentCount
         );
-
-      }
 
     } catch (Exception $e) {
 
       error_log(
-        "Erreur notifications annonces : "
-        . $e->getMessage()
+          "Erreur notifications annonces : "
+          . $e->getMessage()
       );
 
-    }
+  }
 
-    $res->getBody()->write(
+  $res->getBody()->write(
       json_encode([
-        "ok" => true,
-        "notification_count" => count($users ?? [])
+          "ok" => true,
+          "notification_count" => $sentCount ?? 0
       ])
-    );
+  );
 
-    return $res->withHeader(
+  return $res->withHeader(
       "Content-Type",
       "application/json"
-    );
+  );
 
   });
 
